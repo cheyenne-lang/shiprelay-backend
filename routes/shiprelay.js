@@ -48,8 +48,10 @@ router.patch('/shipment/:id/hold', async (req, res) => {
     const response = await fetch(`https://console.shiprelay.com/api/v2/shipments/${req.params.id}/hold`, {
       method: 'PATCH',
       headers: {
+        'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`
-      }
+      },
+      body: JSON.stringify({}) 
     });
 
     const text = await response.text();
