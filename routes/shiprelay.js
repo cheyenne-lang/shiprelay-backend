@@ -75,7 +75,7 @@ router.patch('/shipment/:id/release', async (req, res) => {
   try {
     const token = await getShipRelayToken();
     const response = await fetch(`https://console.shiprelay.com/api/v2/shipments/${req.params.id}/release`, {
-      method: 'PATCH',
+      method: 'PUT',
       headers: {
         Authorization: `Bearer ${token}`
       }
@@ -94,11 +94,20 @@ router.patch('/shipment/:id/archive', async (req, res) => {
     const response = await fetch(`https://console.shiprelay.com/api/v2/shipments/${req.params.id}/archive`, {
       method: 'PATCH',
       headers: {
+        'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`
-      }
+      },
+      body: JSON.stringify({})
     });
-    const data = await response.json();
-    res.status(response.status).json(data);
+
+    const text = await response.text();
+    try {
+      const data = JSON.parse(text);
+      res.status(response.status).json(data);
+    } catch (parseErr) {
+      console.error('ShipRelay archive failed with non-JSON response:', text);
+      res.status(500).json({ error: 'Invalid response from ShipRelay', raw: text });
+    }
   } catch (err) {
     console.error('Error archiving shipment:', err);
     res.status(500).json({ error: 'Failed to archive shipment' });
