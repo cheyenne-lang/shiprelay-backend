@@ -45,7 +45,7 @@ router.get('/shipment', async (req, res) => {
 
 export default router;
 
-router.patch('/shipment/:id/hold', async (req, res) => {
+router.put('/shipment/:id/hold', async (req, res) => {
   try {
     const token = await getShipRelayToken();
     const response = await fetch(`https://console.shiprelay.com/api/v2/shipments/${req.params.id}/hold`, {
@@ -71,7 +71,7 @@ router.patch('/shipment/:id/hold', async (req, res) => {
   }
 });
 
-router.patch('/shipment/:id/release', async (req, res) => {
+router.put('/shipment/:id/release', async (req, res) => {
   try {
     const token = await getShipRelayToken();
     const response = await fetch(`https://console.shiprelay.com/api/v2/shipments/${req.params.id}/release`, {
