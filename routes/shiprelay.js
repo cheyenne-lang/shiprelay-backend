@@ -18,6 +18,10 @@ async function getShipRelayToken() {
   return data.access_token;
 }
 
+router.get('/shipment/ping', (req, res) => {
+  res.status(200).json({ status: 'awake' });
+});
+
 router.get('/shipment', async (req, res) => {
   const { order_ref } = req.query;
   if (!order_ref) return res.status(400).json({ error: 'Missing order_ref' });
@@ -37,3 +41,54 @@ router.get('/shipment', async (req, res) => {
 });
 
 export default router;
+
+router.patch('/shipment/:id/hold', async (req, res) => {
+  try {
+    const token = await getShipRelayToken();
+    const response = await fetch(`https://console.shiprelay.com/api/v2/shipments/${req.params.id}/hold`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (err) {
+    console.error('Error holding shipment:', err);
+    res.status(500).json({ error: 'Failed to hold shipment' });
+  }
+});
+
+router.patch('/shipment/:id/release', async (req, res) => {
+  try {
+    const token = await getShipRelayToken();
+    const response = await fetch(`https://console.shiprelay.com/api/v2/shipments/${req.params.id}/release`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (err) {
+    console.error('Error releasing shipment:', err);
+    res.status(500).json({ error: 'Failed to release shipment' });
+  }
+});
+
+router.patch('/shipment/:id/archive', async (req, res) => {
+  try {
+    const token = await getShipRelayToken();
+    const response = await fetch(`https://console.shiprelay.com/api/v2/shipments/${req.params.id}/archive`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (err) {
+    console.error('Error archiving shipment:', err);
+    res.status(500).json({ error: 'Failed to archive shipment' });
+  }
+});
