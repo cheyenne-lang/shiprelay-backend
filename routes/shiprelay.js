@@ -51,8 +51,15 @@ router.patch('/shipment/:id/hold', async (req, res) => {
         Authorization: `Bearer ${token}`
       }
     });
-    const data = await response.json();
-    res.status(response.status).json(data);
+
+    const text = await response.text();
+    try {
+      const data = JSON.parse(text);
+      res.status(response.status).json(data);
+    } catch (parseErr) {
+      console.error('ShipRelay hold failed with non-JSON response:', text);
+      res.status(500).json({ error: 'Invalid response from ShipRelay', raw: text });
+    }
   } catch (err) {
     console.error('Error holding shipment:', err);
     res.status(500).json({ error: 'Failed to hold shipment' });
