@@ -18,7 +18,7 @@ async function getShipRelayToken() {
   return data.access_token;
 }
 
-router.get('/shipment/ping', (req, res) => {
+router.get('/shipment/ping', (_, res) => {
   res.status(200).json({ status: 'awake' });
 });
 
@@ -68,7 +68,7 @@ async function cancelShopifyFulfillment(shipmentData) {
     if (!fulfillmentsResponse.ok) {
       const errorText = await fulfillmentsResponse.text();
       console.error(`Failed to fetch Shopify fulfillments: ${fulfillmentsResponse.status}`);
-      console.error(`URL: https://${shopDomain}/admin/api/2025-01/orders/${orderId}/fulfillments.json`);
+      console.error(`URL: ${apiUrl}`);
       console.error(`Response: ${errorText}`);
       return;
     }
