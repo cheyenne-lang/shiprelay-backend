@@ -57,7 +57,7 @@ async function cancelShopifyFulfillment(shipmentData) {
     const baseUrl = process.env.SHOPIFY_SHOP_DOMAIN.replace(/\/$/, ''); // Remove trailing slash
     
     // First, find the order by name using the search API
-    const orderSearchUrl = `${baseUrl}/api/2025-01/orders.json?name=%23${orderNumber}&status=any`;
+    const orderSearchUrl = `${baseUrl}/api/2025-01/orders.json?name=${orderNumber}&status=any`;
     const orderResponse = await fetch(orderSearchUrl, {
       headers: {
         'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN,
