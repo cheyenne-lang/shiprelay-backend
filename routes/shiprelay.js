@@ -45,52 +45,74 @@ router.get('/shipment', async (req, res) => {
 
 export default router;
 
-router.put('/shipment/:id/hold', async (req, res) => {
-  try {
-    const token = await getShipRelayToken();
-    const response = await fetch(`https://console.shiprelay.com/api/v2/shipments/${req.params.id}/hold`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({}) 
-    });
-
-    const text = await response.text();
-    try {
-      const data = JSON.parse(text);
-      res.status(response.status).json(data);
-    } catch (parseErr) {
-      console.error('ShipRelay hold failed with non-JSON response:', text);
-      res.status(500).json({ error: 'Invalid response from ShipRelay', raw: text });
-    }
-  } catch (err) {
-    console.error('Error holding shipment:', err);
-    res.status(500).json({ error: 'Failed to hold shipment' });
+async function cancelShopifyFulfillment(shipmentData) {
+  if (!shipmentData?.order_ref || !process.env.SHOPIFY_ACCESS_TOKEN || !process.env.SHOPIFY_SHOP_DOMAIN) {
+    console.log('Skipping Shopify fulfillment cancellation - missing credentials or order reference');
+    return;
   }
-});
 
-router.put('/shipment/:id/release', async (req, res) => {
   try {
-    const token = await getShipRelayToken();
-    const response = await fetch(`https://console.shiprelay.com/api/v2/shipments/${req.params.id}/release`, {
-      method: 'PUT',
+    const orderId = shipmentData.order_ref.replace('#', '');
+    
+    const fulfillmentsResponse = await fetch(`https://${process.env.SHOPIFY_SHOP_DOMAIN}/admin/api/2025-01/orders/${orderId}/fulfillments.json`, {
       headers: {
-        Authorization: `Bearer ${token}`
+        'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN,
+        'Content-Type': 'application/json'
       }
     });
-    const data = await response.json();
-    res.status(response.status).json(data);
+
+    if (!fulfillmentsResponse.ok) {
+      console.error('Failed to fetch Shopify fulfillments:', fulfillmentsResponse.status);
+      return;
+    }
+
+    const fulfillmentsData = await fulfillmentsResponse.json();
+    const activeFulfillments = fulfillmentsData.fulfillments?.filter(f => f.status !== 'cancelled') || [];
+
+    for (const fulfillment of activeFulfillments) {
+      const cancelResponse = await fetch(`https://${process.env.SHOPIFY_SHOP_DOMAIN}/admin/api/2025-01/orders/${orderId}/fulfillments/${fulfillment.id}/cancel.json`, {
+        method: 'POST',
+        headers: {
+          'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          fulfillment: {
+            notify_customer: false,
+            reason: 'other'
+          }
+        })
+      });
+
+      if (cancelResponse.ok) {
+        console.log(`✅ Cancelled Shopify fulfillment ${fulfillment.id} for order ${orderId}`);
+      } else {
+        console.error(`❌ Failed to cancel Shopify fulfillment ${fulfillment.id}:`, await cancelResponse.text());
+      }
+    }
   } catch (err) {
-    console.error('Error releasing shipment:', err);
-    res.status(500).json({ error: 'Failed to release shipment' });
+    console.error('Error cancelling Shopify fulfillment:', err);
   }
-});
+}
 
 router.patch('/shipment/:id/archive', async (req, res) => {
   try {
     const token = await getShipRelayToken();
+    
+    // Get shipment data first to extract order info for Shopify cancellation
+    const shipmentResponse = await fetch(`https://console.shiprelay.com/api/v2/shipments/${req.params.id}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      }
+    });
+    
+    let shipmentData = null;
+    if (shipmentResponse.ok) {
+      const shipmentJson = await shipmentResponse.json();
+      shipmentData = shipmentJson.data || shipmentJson;
+    }
+
     const response = await fetch(`https://console.shiprelay.com/api/v2/shipments/${req.params.id}/archive`, {
       method: 'PATCH',
       headers: {
@@ -103,6 +125,12 @@ router.patch('/shipment/:id/archive', async (req, res) => {
     const text = await response.text();
     try {
       const data = JSON.parse(text);
+      
+      // Cancel Shopify fulfillment if archive was successful
+      if (response.ok && shipmentData) {
+        await cancelShopifyFulfillment(shipmentData);
+      }
+      
       res.status(response.status).json(data);
     } catch (parseErr) {
       console.error('ShipRelay archive failed with non-JSON response:', text);
