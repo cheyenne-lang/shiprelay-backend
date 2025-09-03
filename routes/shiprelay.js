@@ -65,7 +65,10 @@ async function cancelShopifyFulfillment(shipmentData) {
     });
 
     if (!fulfillmentsResponse.ok) {
-      console.error('Failed to fetch Shopify fulfillments:', fulfillmentsResponse.status);
+      const errorText = await fulfillmentsResponse.text();
+      console.error(`Failed to fetch Shopify fulfillments: ${fulfillmentsResponse.status}`);
+      console.error(`URL: https://${shopDomain}/admin/api/2025-01/orders/${orderId}/fulfillments.json`);
+      console.error(`Response: ${errorText}`);
       return;
     }
 
