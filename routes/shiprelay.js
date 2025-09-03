@@ -61,7 +61,8 @@ async function cancelShopifyFulfillment(shipmentData) {
     const orderResponse = await fetch(orderSearchUrl, {
       headers: {
         'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'User-Agent': 'ShipRelay-Integration/1.0'
       }
     });
 
@@ -88,7 +89,8 @@ async function cancelShopifyFulfillment(shipmentData) {
     const fulfillmentsResponse = await fetch(apiUrl, {
       headers: {
         'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'User-Agent': 'ShipRelay-Integration/1.0'
       }
     });
 
@@ -109,7 +111,8 @@ async function cancelShopifyFulfillment(shipmentData) {
         method: 'POST',
         headers: {
           'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'User-Agent': 'ShipRelay-Integration/1.0'
         },
         body: JSON.stringify({
           fulfillment: {
