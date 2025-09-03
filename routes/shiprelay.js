@@ -54,10 +54,11 @@ async function cancelShopifyFulfillment(shipmentData) {
   try {
     const orderId = shipmentData.order_ref.replace('#', '');
     
-    // Clean up shop domain - remove any protocol and trailing slashes
-    const shopDomain = process.env.SHOPIFY_SHOP_DOMAIN.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    // Build API URL - SHOPIFY_SHOP_DOMAIN already includes admin path
+    const baseUrl = process.env.SHOPIFY_SHOP_DOMAIN.replace(/\/$/, ''); // Remove trailing slash
+    const apiUrl = `${baseUrl}/api/2025-01/orders/${orderId}/fulfillments.json`;
     
-    const fulfillmentsResponse = await fetch(`https://${shopDomain}/admin/api/2025-01/orders/${orderId}/fulfillments.json`, {
+    const fulfillmentsResponse = await fetch(apiUrl, {
       headers: {
         'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN,
         'Content-Type': 'application/json'
@@ -76,7 +77,8 @@ async function cancelShopifyFulfillment(shipmentData) {
     const activeFulfillments = fulfillmentsData.fulfillments?.filter(f => f.status !== 'cancelled') || [];
 
     for (const fulfillment of activeFulfillments) {
-      const cancelResponse = await fetch(`https://${shopDomain}/admin/api/2025-01/orders/${orderId}/fulfillments/${fulfillment.id}/cancel.json`, {
+      const cancelUrl = `${baseUrl}/api/2025-01/orders/${orderId}/fulfillments/${fulfillment.id}/cancel.json`;
+      const cancelResponse = await fetch(cancelUrl, {
         method: 'POST',
         headers: {
           'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN,
