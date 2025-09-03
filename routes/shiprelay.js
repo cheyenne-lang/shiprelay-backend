@@ -81,9 +81,11 @@ async function cancelShopifyFulfillment(shipmentData) {
     }
 
     const order = orderData.orders[0];
-    const orderId = order.id;
+    const orderId = order.id; // This should be the numeric ID like 6413424099553
     
-    // Now get the fulfillments for this order
+    console.log(`Found Shopify order ID: ${orderId} for order #${orderNumber}`);
+    
+    // Now get the fulfillments for this order using your base URL
     const apiUrl = `${baseUrl}/api/2025-01/orders/${orderId}/fulfillments.json`;
     
     const fulfillmentsResponse = await fetch(apiUrl, {
