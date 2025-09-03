@@ -54,10 +54,13 @@ async function cancelShopifyFulfillment(shipmentData) {
   try {
     // Use order name search instead of order ID - order_ref should include the #
     const orderNumber = shipmentData.order_ref.replace('#', '');
-    const baseUrl = process.env.SHOPIFY_SHOP_DOMAIN.replace(/\/$/, ''); // Remove trailing slash
+    
+    // Build proper Shopify API URL using store ID
+    const storeId = process.env.SHOPIFY_SHOP_DOMAIN.replace(/\/$/, '');
+    const apiBaseUrl = `https://${storeId}.myshopify.com`;
     
     // First, find the order by name using the search API
-    const orderSearchUrl = `${baseUrl}/api/2025-01/orders.json?name=${orderNumber}&status=any`;
+    const orderSearchUrl = `${apiBaseUrl}/admin/api/2025-01/orders.json?name=${orderNumber}&status=any`;
     const orderResponse = await fetch(orderSearchUrl, {
       headers: {
         'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN,
@@ -85,8 +88,8 @@ async function cancelShopifyFulfillment(shipmentData) {
     
     console.log(`Found Shopify order ID: ${orderId} for order #${orderNumber}`);
     
-    // Now get the fulfillments for this order using your base URL
-    const apiUrl = `${baseUrl}/api/2025-01/orders/${orderId}/fulfillments.json`;
+    // Now get the fulfillments for this order using proper API URL
+    const apiUrl = `${apiBaseUrl}/admin/api/2025-01/orders/${orderId}/fulfillments.json`;
     
     const fulfillmentsResponse = await fetch(apiUrl, {
       headers: {
@@ -108,7 +111,7 @@ async function cancelShopifyFulfillment(shipmentData) {
     const activeFulfillments = fulfillmentsData.fulfillments?.filter(f => f.status !== 'cancelled') || [];
 
     for (const fulfillment of activeFulfillments) {
-      const cancelUrl = `${baseUrl}/api/2025-01/orders/${orderId}/fulfillments/${fulfillment.id}/cancel.json`;
+      const cancelUrl = `${apiBaseUrl}/admin/api/2025-01/orders/${orderId}/fulfillments/${fulfillment.id}/cancel.json`;
       const cancelResponse = await fetch(cancelUrl, {
         method: 'POST',
         headers: {
