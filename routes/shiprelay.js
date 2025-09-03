@@ -52,10 +52,37 @@ async function cancelShopifyFulfillment(shipmentData) {
   }
 
   try {
-    const orderId = shipmentData.order_ref.replace('#', '');
-    
-    // Build API URL - SHOPIFY_SHOP_DOMAIN already includes admin path
+    // Use order name search instead of order ID - order_ref should include the #
+    const orderNumber = shipmentData.order_ref.replace('#', '');
     const baseUrl = process.env.SHOPIFY_SHOP_DOMAIN.replace(/\/$/, ''); // Remove trailing slash
+    
+    // First, find the order by name using the search API
+    const orderSearchUrl = `${baseUrl}/api/2025-01/orders.json?name=%23${orderNumber}&status=any`;
+    const orderResponse = await fetch(orderSearchUrl, {
+      headers: {
+        'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!orderResponse.ok) {
+      const errorText = await orderResponse.text();
+      console.error(`Failed to find Shopify order: ${orderResponse.status}`);
+      console.error(`URL: ${orderSearchUrl}`);
+      console.error(`Response: ${errorText}`);
+      return;
+    }
+
+    const orderData = await orderResponse.json();
+    if (!orderData.orders || orderData.orders.length === 0) {
+      console.log(`No Shopify order found for order name #${orderNumber}`);
+      return;
+    }
+
+    const order = orderData.orders[0];
+    const orderId = order.id;
+    
+    // Now get the fulfillments for this order
     const apiUrl = `${baseUrl}/api/2025-01/orders/${orderId}/fulfillments.json`;
     
     const fulfillmentsResponse = await fetch(apiUrl, {
