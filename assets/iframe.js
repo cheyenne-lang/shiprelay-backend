@@ -82,20 +82,6 @@ function createShipmentCard(shipment, index) {
         <p><strong>Updated:</strong> ${new Date(shipment.updated_at).toLocaleDateString() || '--'}</p>
         ${shipment.tracking?.tracking_number ? `<p><strong>Tracking:</strong> ${shipment.tracking.tracking_number}</p>` : ''}
         ${canEdit ? `<p><strong>ShipRelay:</strong> <a href="${shiprelayLink}" target="_blank" class="shiprelay-link">View/Edit Order →</a></p>` : ''}
-        <div class="order-contents">
-          <p><strong>Order Contents:</strong></p>
-          <div class="items-list" data-shipment-index="${index}">
-            ${shipment.items && shipment.items.length > 0 ? 
-              shipment.items.map((item, itemIndex) => `
-                <div class="order-item" data-item-index="${itemIndex}">
-                  <span class="item-quantity">${item.quantity}x</span>
-                  <span class="item-details">Loading product details...</span>
-                </div>
-              `).join('') : 
-              '<div class="no-items">No items found</div>'
-            }
-          </div>
-        </div>
       </div>
       <div class="shipment-actions" style="display: none;">
         ${canArchive ? `<button class="archive-btn" data-shipment-id="${shipment.id}">Archive</button>` : '<span class="status-note">Already archived</span>'}
@@ -136,9 +122,6 @@ document.getElementById('searchBtn').addEventListener('click', async () => {
         archiveShipment(shipmentId, orderRef);
       });
     });
-
-    // Load product details for all items
-    await loadProductDetails(shipments);
 
     document.getElementById('result').style.display = 'block';
 
@@ -194,8 +177,6 @@ async function archiveShipment(shipmentId, orderRef) {
         });
       });
 
-      // Reload product details after refreshing shipments
-      await loadProductDetails(shipments);
     }
     
   } catch (err) {
@@ -204,76 +185,6 @@ async function archiveShipment(shipmentId, orderRef) {
   }
 }
 
-// Cache for product details to avoid repeated API calls
-const productCache = new Map();
-
-async function fetchProductDetails(productId) {
-  // Check cache first
-  if (productCache.has(productId)) {
-    console.log(`Using cached product details for ID: ${productId}`);
-    return productCache.get(productId);
-  }
-
-  try {
-    const response = await fetch(`https://shiprelay-backend.onrender.com/api/shiprelay/product/${productId}`);
-    if (!response.ok) {
-      console.error(`Failed to fetch product ${productId}: ${response.status} ${response.statusText}`);
-      return null;
-    }
-    const productData = await response.json();
-    
-    // Cache the result for future use
-    productCache.set(productId, productData);
-    return productData;
-  } catch (error) {
-    console.error(`Error fetching product ${productId}:`, error);
-    return null;
-  }
-}
-
-async function loadProductDetails(shipments) {
-  for (let shipmentIndex = 0; shipmentIndex < shipments.length; shipmentIndex++) {
-    const shipment = shipments[shipmentIndex];
-    if (shipment.items && shipment.items.length > 0) {
-      for (let itemIndex = 0; itemIndex < shipment.items.length; itemIndex++) {
-        const item = shipment.items[itemIndex];
-        
-        // Debug: Log the item structure to see what fields are available
-        console.log('Item structure:', item);
-        
-        // Use the product_id field from the shipment item
-        const productId = item.product_id;
-        console.log('Extracted product ID:', productId, 'from item:', item);
-        
-        if (productId) {
-          // Find the item element
-          const itemElement = document.querySelector(`[data-shipment-index="${shipmentIndex}"] [data-item-index="${itemIndex}"] .item-details`);
-          if (itemElement) {
-            console.log(`Fetching product details for ID: ${productId}`);
-            // Fetch product details
-            const productResponse = await fetchProductDetails(productId);
-            if (productResponse) {
-              console.log('Product details received:', productResponse);
-              // ShipRelay API returns either direct product data or wrapped in 'data' field
-              const product = productResponse.data || productResponse;
-              const productName = product.name || product.sku || `Product ${productId}`;
-              itemElement.innerHTML = `${productName} - $${item.sub_total ? (item.sub_total).toFixed(2) : '0.00'}`;
-            } else {
-              console.log(`No product details found for ID: ${productId}`);
-              itemElement.innerHTML = `Product ${productId} - $${item.sub_total ? (item.sub_total).toFixed(2) : '0.00'}`;
-            }
-          }
-        } else {
-          console.log('No product ID found in item:', item);
-          const itemElement = document.querySelector(`[data-shipment-index="${shipmentIndex}"] [data-item-index="${itemIndex}"] .item-details`);
-          if (itemElement) {
-            itemElement.innerHTML = `Unknown Product - $${item.sub_total ? (item.sub_total).toFixed(2) : '0.00'}`;
-          }
-        }
-      }
-    }
-  }
-}
 
 function toggleShipmentDetails(index) {
   const card = document.querySelector(`[data-shipment-index="${index}"]`);
