@@ -1,0 +1,205 @@
+html, body {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: #f9fafb;
+  color: #1f2937;
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  padding: 16px;
+  background-color: white;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.3s ease;
+  overflow-y: auto;
+}
+
+h2 {
+  font-size: 24px;
+  margin-bottom: 10px;
+  font-weight: 600;
+  color: #111827;
+}
+
+#orderInput {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 16px;
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+}
+
+.search-form.compact #orderInput {
+  font-size: 14px;
+  padding: 8px;
+}
+
+.search-btn,
+#archiveBtn {
+  margin-top: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+}
+
+.search-form.compact .search-btn {
+  font-size: 14px;
+  line-height: 2;
+  padding: 0 0.75rem;
+}
+
+.search-btn,
+#archiveBtn {
+  background: linear-gradient(to bottom right, #EF4765, #FF9A5A);
+  border: 0;
+  border-radius: 12px;
+  color: #FFFFFF;
+  cursor: pointer;
+  display: inline-block;
+  font-family: -apple-system,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 2.5;
+  outline: transparent;
+  padding: 0 1rem;
+  text-align: center;
+  text-decoration: none;
+  transition: box-shadow .2s ease-in-out;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  white-space: nowrap;
+}
+
+.search-btn:not([disabled]):focus,
+.search-btn:not([disabled]):hover,
+#archiveBtn:not([disabled]):focus,
+#archiveBtn:not([disabled]):hover {
+  box-shadow: 0 0 .25rem rgba(0, 0, 0, 0.5),
+              -.125rem -.125rem 1rem rgba(239, 71, 101, 0.5),
+              .125rem .125rem 1rem rgba(255, 154, 90, 0.5);
+}
+
+#result {
+  margin-top: 20px;
+}
+
+#actions {
+  margin-top: 15px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#actions button + button {
+  margin-left: 10px;
+}
+
+/* Shipments Container Styles */
+.shipments-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+.shipment-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.shipment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.shipment-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: #374151;
+}
+
+.shipment-status {
+  font-weight: 500;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.shipment-details {
+  margin-bottom: 12px;
+}
+
+.shipment-details p {
+  margin: 4px 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.shipment-details strong {
+  color: #374151;
+}
+
+.shipment-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.archive-btn {
+  background: linear-gradient(to bottom right, #dc2626, #ea580c);
+  border: 0;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 12px;
+  transition: all 0.2s ease;
+}
+
+.archive-btn:hover {
+  background: linear-gradient(to bottom right, #b91c1c, #c2410c);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+}
+
+.status-note {
+  font-size: 12px;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.customer-info {
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 8px;
+}
