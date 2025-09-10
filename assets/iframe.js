@@ -64,12 +64,15 @@ function createShipmentCard(shipment, index) {
   const shiprelayLink = `https://console.shiprelay.com/admin/requests/${shipment.status}/${shipment.source_order_id}/edit?cursor=${shipment.id}&order=${shipment.order_ref}&caller=terminal&focus=${shipment.status}`;
   
   return `
-    <div class="shipment-card" style="border-left: 4px solid ${statusColor};">
-      <div class="shipment-header">
+    <div class="shipment-card" style="border-left: 4px solid ${statusColor};" data-shipment-index="${index}">
+      <div class="shipment-header" onclick="toggleShipmentDetails(${index})">
         <span class="shipment-title">Shipment #${index + 1}</span>
-        <span class="shipment-status" style="color: ${statusColor};">${shipment.status || '--'}</span>
+        <div class="header-right">
+          <span class="shipment-status" style="color: ${statusColor};">${shipment.status || '--'}</span>
+          <span class="expand-icon">▼</span>
+        </div>
       </div>
-      <div class="shipment-details">
+      <div class="shipment-details" style="display: none;">
         <p><strong>Name:</strong> ${address?.name || '--'}</p>
         <p><strong>Email:</strong> ${address?.email || '--'}</p>
         <div class="address-section">
@@ -79,8 +82,22 @@ function createShipmentCard(shipment, index) {
         <p><strong>Updated:</strong> ${new Date(shipment.updated_at).toLocaleDateString() || '--'}</p>
         ${shipment.tracking?.tracking_number ? `<p><strong>Tracking:</strong> ${shipment.tracking.tracking_number}</p>` : ''}
         ${canEdit ? `<p><strong>ShipRelay:</strong> <a href="${shiprelayLink}" target="_blank" class="shiprelay-link">View/Edit Order →</a></p>` : ''}
+        <div class="order-contents">
+          <p><strong>Order Contents:</strong></p>
+          <div class="items-list" data-shipment-index="${index}">
+            ${shipment.items && shipment.items.length > 0 ? 
+              shipment.items.map((item, itemIndex) => `
+                <div class="order-item" data-item-index="${itemIndex}">
+                  <span class="item-quantity">${item.quantity}x</span>
+                  <span class="item-details">Loading product details...</span>
+                </div>
+              `).join('') : 
+              '<div class="no-items">No items found</div>'
+            }
+          </div>
+        </div>
       </div>
-      <div class="shipment-actions">
+      <div class="shipment-actions" style="display: none;">
         ${canArchive ? `<button class="archive-btn" data-shipment-id="${shipment.id}">Archive</button>` : '<span class="status-note">Already archived</span>'}
       </div>
     </div>
@@ -103,7 +120,6 @@ document.getElementById('searchBtn').addEventListener('click', async () => {
   const shipments = await getShipmentsByOrderRef(orderRef);
 
   if (shipments && shipments.length > 0) {
-    console.log(`Found ${shipments.length} shipments:`, shipments);
     
     // Customer info now displayed in individual cards
 
@@ -120,6 +136,9 @@ document.getElementById('searchBtn').addEventListener('click', async () => {
         archiveShipment(shipmentId, orderRef);
       });
     });
+
+    // Load product details for all items
+    await loadProductDetails(shipments);
 
     document.getElementById('result').style.display = 'block';
 
@@ -180,6 +199,89 @@ async function archiveShipment(shipmentId, orderRef) {
     console.error('Archive failed:', err);
     alert('Archive failed');
   }
+}
+
+async function fetchProductDetails(productId) {
+  try {
+    const response = await fetch(`https://shiprelay-backend.onrender.com/api/shiprelay/product/${productId}`);
+    if (!response.ok) throw new Error('Failed to fetch product');
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching product ${productId}:`, error);
+    return null;
+  }
+}
+
+async function loadProductDetails(shipments) {
+  for (let shipmentIndex = 0; shipmentIndex < shipments.length; shipmentIndex++) {
+    const shipment = shipments[shipmentIndex];
+    if (shipment.items && shipment.items.length > 0) {
+      for (let itemIndex = 0; itemIndex < shipment.items.length; itemIndex++) {
+        const item = shipment.items[itemIndex];
+        
+        // Debug: Log the item structure to see what fields are available
+        console.log('Item structure:', item);
+        
+        // Try different possible product ID fields
+        const productId = item.product_id || item.id || item.sku;
+        
+        if (productId) {
+          // Find the item element
+          const itemElement = document.querySelector(`[data-shipment-index="${shipmentIndex}"] [data-item-index="${itemIndex}"] .item-details`);
+          if (itemElement) {
+            console.log(`Fetching product details for ID: ${productId}`);
+            // Fetch product details
+            const product = await fetchProductDetails(productId);
+            if (product) {
+              console.log('Product details received:', product);
+              itemElement.innerHTML = `${product.name || product.sku || `Product ${productId}`} - $${item.sub_total ? (item.sub_total).toFixed(2) : '0.00'}`;
+            } else {
+              console.log(`No product details found for ID: ${productId}`);
+              itemElement.innerHTML = `Product ${productId} - $${item.sub_total ? (item.sub_total).toFixed(2) : '0.00'}`;
+            }
+          }
+        } else {
+          console.log('No product ID found in item:', item);
+          const itemElement = document.querySelector(`[data-shipment-index="${shipmentIndex}"] [data-item-index="${itemIndex}"] .item-details`);
+          if (itemElement) {
+            itemElement.innerHTML = `Unknown Product - $${item.sub_total ? (item.sub_total).toFixed(2) : '0.00'}`;
+          }
+        }
+      }
+    }
+  }
+}
+
+function toggleShipmentDetails(index) {
+  const card = document.querySelector(`[data-shipment-index="${index}"]`);
+  if (!card) return;
+  
+  const details = card.querySelector('.shipment-details');
+  const actions = card.querySelector('.shipment-actions');
+  const expandIcon = card.querySelector('.expand-icon');
+  
+  const isExpanded = details.style.display !== 'none';
+  
+  if (isExpanded) {
+    // Collapse
+    details.style.display = 'none';
+    actions.style.display = 'none';
+    expandIcon.textContent = '▼';
+    expandIcon.style.transform = 'rotate(0deg)';
+  } else {
+    // Expand
+    details.style.display = 'block';
+    actions.style.display = 'flex';
+    expandIcon.textContent = '▲';
+    expandIcon.style.transform = 'rotate(180deg)';
+  }
+  
+  // Adjust iframe height after expansion/collapse
+  setTimeout(() => {
+    const container = document.querySelector('.container');
+    const containerHeight = container.scrollHeight;
+    client.invoke('resize', { width: '100%', height: `${Math.max(containerHeight + 20, 300)}px` });
+  }, 100);
 }
 
 client.invoke('resize', { width: '100%', height: '300px' });

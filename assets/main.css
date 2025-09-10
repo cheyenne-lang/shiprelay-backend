@@ -162,8 +162,9 @@ h2 {
   flex-direction: column;
   gap: 12px;
   margin-top: 16px;
-  max-height: 350px;
-  overflow-y: auto;
+  max-height: none;
+  height: auto;
+  overflow: visible;
 }
 
 .shipment-card {
@@ -181,9 +182,31 @@ h2 {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
+  margin-bottom: 0;
+  padding: 0 0 12px 0;
   border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.shipment-header:hover {
+  background-color: #f8fafc;
+  margin: -8px -12px 0 -12px;
+  padding: 8px 12px 12px 12px;
+  border-radius: 8px 8px 0 0;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.expand-icon {
+  font-size: 12px;
+  color: #64748b;
+  transition: transform 0.2s ease;
+  user-select: none;
 }
 
 .shipment-title {
@@ -204,6 +227,8 @@ h2 {
 
 .shipment-details {
   margin-bottom: 20px;
+  height: auto;
+  overflow: visible;
 }
 
 .shipment-details p {
@@ -253,6 +278,54 @@ h2 {
   padding-bottom: 12px;
   border-bottom: 1px solid #e5e7eb;
   margin-bottom: 8px;
+}
+
+/* Order Contents Styles */
+.order-contents {
+  background: #f1f5f9;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 16px 0;
+  border: 1px solid #e2e8f0;
+}
+
+.order-contents p {
+  margin: 0 0 8px 0 !important;
+}
+
+.items-list {
+  margin-top: 8px;
+}
+
+.order-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 13px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.order-item:last-child {
+  border-bottom: none;
+}
+
+.item-quantity {
+  font-weight: 600;
+  color: #475569;
+  min-width: 30px;
+}
+
+.item-details {
+  color: #64748b;
+  flex: 1;
+}
+
+.no-items {
+  color: #9ca3af;
+  font-style: italic;
+  text-align: center;
+  padding: 8px 0;
 }
 
 /* Address and Link Styles */
