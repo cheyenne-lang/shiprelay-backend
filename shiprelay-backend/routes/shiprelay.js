@@ -125,12 +125,10 @@ router.get('/product/:id', async (req, res) => {
 
     const productData = await response.json();
     
-    // Log the product data for debugging
-    console.log(`Product ${id} fetched successfully:`, { 
-      id: productData.id, 
-      name: productData.name, 
-      sku: productData.sku 
-    });
+    // Log the complete product data for debugging
+    console.log('=== FULL PRODUCT OBJECT ===');
+    console.log(JSON.stringify(productData, null, 2));
+    console.log('=== END PRODUCT OBJECT ===');
     
     res.json(productData);
   } catch (err) {
