@@ -77,9 +77,35 @@ router.get('/shipment', async (req, res) => {
 
     const data = await response.json();
     
-    // Sort shipments by updated_at (most recent first) if we have multiple
+    // Filter and sort shipments to show only relevant ones
     if (data.data && Array.isArray(data.data)) {
+      // Sort by updated_at (most recent first)
       data.data.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+      
+      // Define active/relevant statuses
+      const relevantStatuses = ['queued', 'held', 'requested', 'processing', 'shipped'];
+      
+      // Filter logic: most recent + active/shipped orders
+      const filteredShipments = [];
+      
+      // Always include the most recently edited shipment (first in sorted array)
+      if (data.data.length > 0) {
+        filteredShipments.push(data.data[0]);
+        console.log(`✓ Including most recent shipment (${data.data[0].status}) updated ${data.data[0].updated_at}`);
+      }
+      
+      // Add any other shipments with relevant statuses (if not already included)
+      data.data.slice(1).forEach(shipment => {
+        if (relevantStatuses.includes(shipment.status?.toLowerCase())) {
+          filteredShipments.push(shipment);
+          console.log(`✓ Including ${shipment.status} shipment updated ${shipment.updated_at}`);
+        } else {
+          console.log(`✗ Skipping ${shipment.status} shipment updated ${shipment.updated_at}`);
+        }
+      });
+      
+      console.log(`📦 Filtered ${data.data.length} shipments down to ${filteredShipments.length} relevant ones`);
+      data.data = filteredShipments;
     }
     
     res.json(data);
@@ -116,7 +142,6 @@ router.get('/product/:id', async (req, res) => {
       if (response.status === 404) {
         return res.status(404).json({ error: 'Product not found' });
       }
-      const errorText = await response.text();
       return res.status(response.status).json({ 
         error: 'ShipRelay API error',
         details: 'Failed to fetch product details'
