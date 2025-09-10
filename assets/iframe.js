@@ -22,9 +22,15 @@ async function getShipmentsByOrderRef(orderRef) {
 }
 
 function canArchiveShipment(status) {
-  // Based on ShipRelay API, shipments can be archived unless they're already inactive
-  const nonArchivableStatuses = ['inactive'];
+  // Based on ShipRelay API, shipments can be archived unless they're already in final states
+  const nonArchivableStatuses = ['inactive', 'shipped', 'returned'];
   return !nonArchivableStatuses.includes(status?.toLowerCase());
+}
+
+function canEditShipment(status) {
+  // Based on ShipRelay API, shipments can only be edited when in certain statuses
+  const editableStatuses = ['queued', 'held'];
+  return editableStatuses.includes(status?.toLowerCase());
 }
 
 function getStatusColor(status) {
@@ -40,16 +46,11 @@ function getStatusColor(status) {
   return statusColors[status?.toLowerCase()] || '#6b7280';
 }
 
-function canEditShipment(status) {
-  // Based on ShipRelay API, shipments can only be edited when in certain statuses
-  const editableStatuses = ['queued', 'held'];
-  return editableStatuses.includes(status?.toLowerCase());
-}
-
-function createShipmentCard(shipment, index) {
+function createShipmentCard(shipment, index, totalShipments) {
   const canArchive = canArchiveShipment(shipment.status);
   const canEdit = canEditShipment(shipment.status);
   const statusColor = getStatusColor(shipment.status);
+  const showToggle = totalShipments > 1;
   
   // Format shipping address
   const address = shipment.address;
@@ -60,21 +61,19 @@ function createShipmentCard(shipment, index) {
      ${address.country || ''}`.replace(/,\s*<br>/g, '<br>').replace(/<br>\s*<br>/g, '<br>') 
     : 'Address not available';
   
-  // Create ShipRelay console edit link using source_order_id
-  const shiprelayLink = `https://console.shiprelay.com/admin/requests/${shipment.status}/${shipment.source_order_id}/edit?cursor=${shipment.id}&order=${shipment.order_ref}&caller=terminal&focus=${shipment.status}`;
+  // Create ShipRelay console link
+  const shiprelayLink = `https://console.shiprelay.com/shipments/${shipment.id}`;
   
   return `
     <div class="shipment-card" style="border-left: 4px solid ${statusColor};" data-shipment-index="${index}">
-      <div class="shipment-header" onclick="toggleShipmentDetails(${index})">
+      <div class="shipment-header" ${showToggle ? `onclick="toggleShipmentDetails(${index})"` : ''}>
         <span class="shipment-title">Shipment #${index + 1}</span>
         <div class="header-right">
           <span class="shipment-status" style="color: ${statusColor};">${shipment.status || '--'}</span>
-          <span class="expand-icon">▼</span>
+          ${showToggle ? '<span class="expand-icon">▼</span>' : ''}
         </div>
       </div>
-      <div class="shipment-details" style="display: none;">
-        <p><strong>Name:</strong> ${address?.name || '--'}</p>
-        <p><strong>Email:</strong> ${address?.email || '--'}</p>
+      <div class="shipment-details" ${showToggle ? 'style="display: none;"' : ''}>
         <div class="address-section">
           <p><strong>Shipping to:</strong></p>
           <div class="shipping-address">${shippingAddress}</div>
@@ -83,8 +82,9 @@ function createShipmentCard(shipment, index) {
         ${shipment.tracking?.tracking_number ? `<p><strong>Tracking:</strong> ${shipment.tracking.tracking_number}</p>` : ''}
         ${canEdit ? `<p><strong>ShipRelay:</strong> <a href="${shiprelayLink}" target="_blank" class="shiprelay-link">View/Edit Order →</a></p>` : ''}
       </div>
-      <div class="shipment-actions" style="display: none;">
-        ${canArchive ? `<button class="archive-btn" data-shipment-id="${shipment.id}">Archive</button>` : '<span class="status-note">Already archived</span>'}
+      <div class="shipment-actions" ${showToggle ? 'style="display: none;"' : ''}>
+        ${canArchive ? `<button class="archive-btn" data-shipment-id="${shipment.id}">Archive</button>` : 
+          (shipment.status?.toLowerCase() === 'inactive' ? '<span class="status-note">Already archived</span>' : '')}
       </div>
     </div>
   `;
@@ -106,13 +106,12 @@ document.getElementById('searchBtn').addEventListener('click', async () => {
   const shipments = await getShipmentsByOrderRef(orderRef);
 
   if (shipments && shipments.length > 0) {
+    console.log(`Found ${shipments.length} shipments:`, shipments);
     
-    // Customer info now displayed in individual cards
-
     // Build shipments container HTML
     const shipmentsContainer = document.getElementById('shipmentsContainer');
     shipmentsContainer.innerHTML = shipments.map((shipment, index) => 
-      createShipmentCard(shipment, index)
+      createShipmentCard(shipment, index, shipments.length)
     ).join('');
 
     // Add event listeners to all archive buttons
@@ -166,7 +165,7 @@ async function archiveShipment(shipmentId, orderRef) {
       // Rebuild shipments container HTML
       const shipmentsContainer = document.getElementById('shipmentsContainer');
       shipmentsContainer.innerHTML = shipments.map((shipment, index) => 
-        createShipmentCard(shipment, index)
+        createShipmentCard(shipment, index, shipments.length)
       ).join('');
 
       // Re-add event listeners to archive buttons
@@ -176,7 +175,6 @@ async function archiveShipment(shipmentId, orderRef) {
           archiveShipment(newShipmentId, orderRef);
         });
       });
-
     }
     
   } catch (err) {
@@ -184,7 +182,6 @@ async function archiveShipment(shipmentId, orderRef) {
     alert('Archive failed');
   }
 }
-
 
 function toggleShipmentDetails(index) {
   const card = document.querySelector(`[data-shipment-index="${index}"]`);
