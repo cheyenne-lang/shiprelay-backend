@@ -124,6 +124,14 @@ router.get('/product/:id', async (req, res) => {
     }
 
     const productData = await response.json();
+    
+    // Log the product data for debugging
+    console.log(`Product ${id} fetched successfully:`, { 
+      id: productData.id, 
+      name: productData.name, 
+      sku: productData.sku 
+    });
+    
     res.json(productData);
   } catch (err) {
     console.error('Product fetch error:', err);
