@@ -193,6 +193,9 @@ async function archiveShipment(shipmentId, orderRef) {
           archiveShipment(newShipmentId, orderRef);
         });
       });
+
+      // Reload product details after refreshing shipments
+      await loadProductDetails(shipments);
     }
     
   } catch (err) {
@@ -201,11 +204,27 @@ async function archiveShipment(shipmentId, orderRef) {
   }
 }
 
+// Cache for product details to avoid repeated API calls
+const productCache = new Map();
+
 async function fetchProductDetails(productId) {
+  // Check cache first
+  if (productCache.has(productId)) {
+    console.log(`Using cached product details for ID: ${productId}`);
+    return productCache.get(productId);
+  }
+
   try {
     const response = await fetch(`https://shiprelay-backend.onrender.com/api/shiprelay/product/${productId}`);
-    if (!response.ok) throw new Error('Failed to fetch product');
-    return await response.json();
+    if (!response.ok) {
+      console.error(`Failed to fetch product ${productId}: ${response.status} ${response.statusText}`);
+      return null;
+    }
+    const productData = await response.json();
+    
+    // Cache the result for future use
+    productCache.set(productId, productData);
+    return productData;
   } catch (error) {
     console.error(`Error fetching product ${productId}:`, error);
     return null;
@@ -222,8 +241,9 @@ async function loadProductDetails(shipments) {
         // Debug: Log the item structure to see what fields are available
         console.log('Item structure:', item);
         
-        // Try different possible product ID fields
-        const productId = item.product_id || item.id || item.sku;
+        // Use the product_id field from the shipment item
+        const productId = item.product_id;
+        console.log('Extracted product ID:', productId, 'from item:', item);
         
         if (productId) {
           // Find the item element
@@ -231,10 +251,13 @@ async function loadProductDetails(shipments) {
           if (itemElement) {
             console.log(`Fetching product details for ID: ${productId}`);
             // Fetch product details
-            const product = await fetchProductDetails(productId);
-            if (product) {
-              console.log('Product details received:', product);
-              itemElement.innerHTML = `${product.name || product.sku || `Product ${productId}`} - $${item.sub_total ? (item.sub_total).toFixed(2) : '0.00'}`;
+            const productResponse = await fetchProductDetails(productId);
+            if (productResponse) {
+              console.log('Product details received:', productResponse);
+              // ShipRelay API returns either direct product data or wrapped in 'data' field
+              const product = productResponse.data || productResponse;
+              const productName = product.name || product.sku || `Product ${productId}`;
+              itemElement.innerHTML = `${productName} - $${item.sub_total ? (item.sub_total).toFixed(2) : '0.00'}`;
             } else {
               console.log(`No product details found for ID: ${productId}`);
               itemElement.innerHTML = `Product ${productId} - $${item.sub_total ? (item.sub_total).toFixed(2) : '0.00'}`;
