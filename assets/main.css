@@ -35,37 +35,80 @@ h2 {
   color: #111827;
 }
 
-#orderInput {
-  width: 100%;
+.search-input-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
   margin-top: 10px;
-  padding: 10px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
+}
+
+#orderInput {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
   font-size: 16px;
   box-sizing: border-box;
   transition: all 0.3s ease;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+#orderInput:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .search-form.compact #orderInput {
   font-size: 14px;
-  padding: 8px;
+  padding: 10px 14px;
 }
 
-.search-btn,
-#archiveBtn {
-  margin-top: 10px;
-  width: 100%;
+.search-btn {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
   box-sizing: border-box;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  color: #1e293b;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: -apple-system,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  outline: transparent;
+  text-decoration: none;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.search-btn:after {
+  content: "↗";
+  font-size: 18px;
+  font-weight: 600;
 }
 
 .search-form.compact .search-btn {
-  font-size: 14px;
-  line-height: 2;
-  padding: 0 0.75rem;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
 }
 
-.search-btn,
+.search-btn:not([disabled]):focus,
+.search-btn:not([disabled]):hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+}
+
+/* Keep archive button styling separate */
 #archiveBtn {
   background: linear-gradient(to bottom right, #EF4765, #FF9A5A);
   border: 0;
@@ -86,10 +129,10 @@ h2 {
   -webkit-user-select: none;
   touch-action: manipulation;
   white-space: nowrap;
+  margin-top: 10px;
+  width: 100%;
 }
 
-.search-btn:not([disabled]):focus,
-.search-btn:not([disabled]):hover,
 #archiveBtn:not([disabled]):focus,
 #archiveBtn:not([disabled]):hover {
   box-shadow: 0 0 .25rem rgba(0, 0, 0, 0.5),
@@ -126,46 +169,53 @@ h2 {
 .shipment-card {
   background: white;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  position: relative;
+  overflow: hidden;
 }
 
 .shipment-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid #f3f4f6;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
 }
 
 .shipment-title {
   font-weight: 600;
-  font-size: 14px;
-  color: #374151;
+  font-size: 18px;
+  color: #1e293b;
 }
 
 .shipment-status {
-  font-weight: 500;
-  font-size: 12px;
+  font-weight: 600;
+  font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .shipment-details {
-  margin-bottom: 12px;
+  margin-bottom: 20px;
 }
 
 .shipment-details p {
-  margin: 4px 0;
-  font-size: 13px;
-  color: #6b7280;
+  margin: 12px 0;
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.5;
 }
 
 .shipment-details strong {
-  color: #374151;
+  color: #334155;
+  font-weight: 600;
 }
 
 .shipment-actions {
@@ -175,21 +225,22 @@ h2 {
 }
 
 .archive-btn {
-  background: linear-gradient(to bottom right, #dc2626, #ea580c);
+  background: #ef4444;
   border: 0;
   border-radius: 8px;
   color: white;
   cursor: pointer;
-  font-size: 12px;
-  font-weight: 500;
-  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 20px;
   transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
 }
 
 .archive-btn:hover {
-  background: linear-gradient(to bottom right, #b91c1c, #c2410c);
+  background: #dc2626;
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+  box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
 }
 
 .status-note {
@@ -202,4 +253,41 @@ h2 {
   padding-bottom: 12px;
   border-bottom: 1px solid #e5e7eb;
   margin-bottom: 8px;
+}
+
+/* Address and Link Styles */
+.address-section {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+  border: 1px solid #e2e8f0;
+}
+
+.address-section p {
+  margin: 0 0 8px 0 !important;
+}
+
+.shipping-address {
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.4;
+  margin-top: 8px;
+  font-family: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+}
+
+.shiprelay-link {
+  color: #3b82f6;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  transition: color 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.shiprelay-link:hover {
+  color: #2563eb;
+  text-decoration: none;
 }

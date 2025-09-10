@@ -7,16 +7,13 @@
 <body>
   <div class="container">
     <div id="searchForm" class="search-form">
-      <input id="orderInput" type="text" placeholder="Enter Order ID" class="order-input" />
-      <button id="searchBtn" class="search-btn">Search</button>
+      <div class="search-input-group">
+        <input id="orderInput" type="text" placeholder="Enter Order ID" class="order-input" />
+        <button id="searchBtn" class="search-btn"></button>
+      </div>
     </div>
 
     <div id="result" class="result" style="display: none;">
-      <div id="customerInfo" class="customer-info">
-        <p><strong>Name:</strong> <span id="custName">--</span></p>
-        <p><strong>Email:</strong> <span id="custEmail">--</span></p>
-      </div>
-
       <div id="shipmentsContainer" class="shipments-container">
         <!-- Multiple shipments will be displayed here -->
       </div>

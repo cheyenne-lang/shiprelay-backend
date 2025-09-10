@@ -105,64 +105,103 @@ async function cancelShopifyFulfillment(shipmentData) {
     // Use order name search instead of order ID - order_ref should include the #
     const orderNumber = shipmentData.order_ref.replace('#', '');
     
-    // Build proper Shopify API URL using store ID
+    // Build proper Shopify GraphQL API URL
     const storeId = process.env.SHOPIFY_SHOP_DOMAIN.replace(/\/$/, '');
-    const apiBaseUrl = `https://${storeId}.myshopify.com`;
+    const graphqlUrl = `https://${storeId}.myshopify.com/admin/api/2025-01/graphql.json`;
     
-    // First, find the order by name using the search API
-    const orderSearchUrl = `${apiBaseUrl}/admin/api/2025-01/orders.json?name=${orderNumber}&status=any`;
-    const orderResponse = await fetch(orderSearchUrl, {
+    console.log(`Looking for Shopify order: ${orderNumber}`);
+    
+    // Step 1: Find the order by name using GraphQL
+    const orderQuery = `
+      query getOrderByName($query: String!) {
+        orders(first: 1, query: $query) {
+          edges {
+            node {
+              id
+              name
+              fulfillmentOrders(first: 10) {
+                edges {
+                  node {
+                    id
+                    status
+                    requestStatus
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
+    
+    const orderResponse = await fetch(graphqlUrl, {
+      method: 'POST',
       headers: {
         'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN,
         'Content-Type': 'application/json',
         'User-Agent': 'ShipRelay-Integration/1.0'
-      }
+      },
+      body: JSON.stringify({
+        query: orderQuery,
+        variables: { query: `name:${orderNumber}` }
+      })
     });
 
     if (!orderResponse.ok) {
       const errorText = await orderResponse.text();
-      console.error(`Failed to find Shopify order: ${orderResponse.status}`);
-      console.error(`URL: ${orderSearchUrl}`);
+      console.error(`Failed to find Shopify order via GraphQL: ${orderResponse.status}`);
       console.error(`Response: ${errorText}`);
       return;
     }
 
     const orderData = await orderResponse.json();
-    if (!orderData.orders || orderData.orders.length === 0) {
-      console.log(`No Shopify order found for order name #${orderNumber}`);
+    
+    if (orderData.errors) {
+      console.error('GraphQL errors:', orderData.errors);
+      return;
+    }
+    
+    if (!orderData.data?.orders?.edges?.length) {
+      console.log(`No Shopify order found for order name ${orderNumber}`);
       return;
     }
 
-    const order = orderData.orders[0];
-    const orderId = order.id; // This should be the numeric ID like 6413424099553
+    const order = orderData.data.orders.edges[0].node;
+    console.log(`Found Shopify order: ${order.name} (${order.id})`);
     
-    console.log(`Found Shopify order ID: ${orderId} for order #${orderNumber}`);
+    // Step 2: Submit cancellation requests for fulfillment orders
+    const fulfillmentOrders = order.fulfillmentOrders.edges
+      .map(edge => edge.node)
+      .filter(fo => fo.status !== 'CANCELLED' && fo.requestStatus !== 'CANCELLATION_REQUESTED');
     
-    // Now get the fulfillments for this order using proper API URL
-    const apiUrl = `${apiBaseUrl}/admin/api/2025-01/orders/${orderId}/fulfillments.json`;
+    if (fulfillmentOrders.length === 0) {
+      console.log('No active fulfillment orders to cancel');
+      return;
+    }
+
+    console.log(`Found ${fulfillmentOrders.length} fulfillment orders to cancel`);
     
-    const fulfillmentsResponse = await fetch(apiUrl, {
-      headers: {
-        'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN,
-        'Content-Type': 'application/json',
-        'User-Agent': 'ShipRelay-Integration/1.0'
+    // Step 3: Submit cancellation request for each fulfillment order
+    const cancellationMutation = `
+      mutation fulfillmentOrderSubmitCancellationRequest($id: ID!, $message: String) {
+        fulfillmentOrderSubmitCancellationRequest(id: $id, message: $message) {
+          fulfillmentOrder {
+            id
+            status
+            requestStatus
+          }
+          userErrors {
+            field
+            message
+          }
+        }
       }
-    });
+    `;
 
-    if (!fulfillmentsResponse.ok) {
-      const errorText = await fulfillmentsResponse.text();
-      console.error(`Failed to fetch Shopify fulfillments: ${fulfillmentsResponse.status}`);
-      console.error(`URL: ${apiUrl}`);
-      console.error(`Response: ${errorText}`);
-      return;
-    }
-
-    const fulfillmentsData = await fulfillmentsResponse.json();
-    const activeFulfillments = fulfillmentsData.fulfillments?.filter(f => f.status !== 'cancelled') || [];
-
-    for (const fulfillment of activeFulfillments) {
-      const cancelUrl = `${apiBaseUrl}/admin/api/2025-01/orders/${orderId}/fulfillments/${fulfillment.id}/cancel.json`;
-      const cancelResponse = await fetch(cancelUrl, {
+    for (const fulfillmentOrder of fulfillmentOrders) {
+      console.log(`Submitting cancellation for fulfillment order: ${fulfillmentOrder.id}`);
+      
+      const cancellationResponse = await fetch(graphqlUrl, {
         method: 'POST',
         headers: {
           'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN,
@@ -170,19 +209,31 @@ async function cancelShopifyFulfillment(shipmentData) {
           'User-Agent': 'ShipRelay-Integration/1.0'
         },
         body: JSON.stringify({
-          fulfillment: {
-            notify_customer: false,
-            reason: 'other'
+          query: cancellationMutation,
+          variables: { 
+            id: fulfillmentOrder.id,
+            message: 'Order archived in ShipRelay'
           }
         })
       });
 
-      if (cancelResponse.ok) {
-        console.log(`✅ Cancelled Shopify fulfillment ${fulfillment.id} for order ${orderId}`);
+      if (cancellationResponse.ok) {
+        const cancellationData = await cancellationResponse.json();
+        
+        if (cancellationData.errors) {
+          console.error(`GraphQL errors for fulfillment order ${fulfillmentOrder.id}:`, cancellationData.errors);
+        } else if (cancellationData.data?.fulfillmentOrderSubmitCancellationRequest?.userErrors?.length > 0) {
+          console.error(`User errors for fulfillment order ${fulfillmentOrder.id}:`, 
+            cancellationData.data.fulfillmentOrderSubmitCancellationRequest.userErrors);
+        } else {
+          console.log(`✅ Successfully submitted cancellation request for fulfillment order ${fulfillmentOrder.id}`);
+        }
       } else {
-        console.error(`❌ Failed to cancel Shopify fulfillment ${fulfillment.id}:`, await cancelResponse.text());
+        console.error(`❌ Failed to submit cancellation for fulfillment order ${fulfillmentOrder.id}:`, 
+          await cancellationResponse.text());
       }
     }
+    
   } catch (err) {
     console.error('Error cancelling Shopify fulfillment:', err);
   }

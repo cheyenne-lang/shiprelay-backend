@@ -40,9 +40,28 @@ function getStatusColor(status) {
   return statusColors[status?.toLowerCase()] || '#6b7280';
 }
 
+function canEditShipment(status) {
+  // Based on ShipRelay API, shipments can only be edited when in certain statuses
+  const editableStatuses = ['queued', 'held'];
+  return editableStatuses.includes(status?.toLowerCase());
+}
+
 function createShipmentCard(shipment, index) {
   const canArchive = canArchiveShipment(shipment.status);
+  const canEdit = canEditShipment(shipment.status);
   const statusColor = getStatusColor(shipment.status);
+  
+  // Format shipping address
+  const address = shipment.address;
+  const shippingAddress = address ? 
+    `${address.name || ''}<br>
+     ${address.address1 || ''}${address.address2 ? ', ' + address.address2 : ''}<br>
+     ${address.city || ''}, ${address.region || ''} ${address.zip || ''}<br>
+     ${address.country || ''}`.replace(/,\s*<br>/g, '<br>').replace(/<br>\s*<br>/g, '<br>') 
+    : 'Address not available';
+  
+  // Create ShipRelay console edit link using source_order_id
+  const shiprelayLink = `https://console.shiprelay.com/admin/requests/${shipment.status}/${shipment.source_order_id}/edit?cursor=${shipment.id}&order=${shipment.order_ref}&caller=terminal&focus=${shipment.status}`;
   
   return `
     <div class="shipment-card" style="border-left: 4px solid ${statusColor};">
@@ -51,9 +70,15 @@ function createShipmentCard(shipment, index) {
         <span class="shipment-status" style="color: ${statusColor};">${shipment.status || '--'}</span>
       </div>
       <div class="shipment-details">
-        <p><strong>Shipment ID:</strong> ${shipment.id || '--'}</p>
+        <p><strong>Name:</strong> ${address?.name || '--'}</p>
+        <p><strong>Email:</strong> ${address?.email || '--'}</p>
+        <div class="address-section">
+          <p><strong>Shipping to:</strong></p>
+          <div class="shipping-address">${shippingAddress}</div>
+        </div>
         <p><strong>Updated:</strong> ${new Date(shipment.updated_at).toLocaleDateString() || '--'}</p>
         ${shipment.tracking?.tracking_number ? `<p><strong>Tracking:</strong> ${shipment.tracking.tracking_number}</p>` : ''}
+        ${canEdit ? `<p><strong>ShipRelay:</strong> <a href="${shiprelayLink}" target="_blank" class="shiprelay-link">View/Edit Order →</a></p>` : ''}
       </div>
       <div class="shipment-actions">
         ${canArchive ? `<button class="archive-btn" data-shipment-id="${shipment.id}">Archive</button>` : '<span class="status-note">Already archived</span>'}
@@ -80,10 +105,7 @@ document.getElementById('searchBtn').addEventListener('click', async () => {
   if (shipments && shipments.length > 0) {
     console.log(`Found ${shipments.length} shipments:`, shipments);
     
-    // Set customer info from first shipment
-    const firstShipment = shipments[0];
-    document.getElementById('custName').textContent = firstShipment.address?.name || '--';
-    document.getElementById('custEmail').textContent = firstShipment.address?.email || '--';
+    // Customer info now displayed in individual cards
 
     // Build shipments container HTML
     const shipmentsContainer = document.getElementById('shipmentsContainer');
